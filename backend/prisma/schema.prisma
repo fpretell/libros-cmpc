@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique(map: "idx_usuarios_email") @db.VarChar(255)
+  password  String    @db.VarChar(255)
+  nombre    String?   @db.VarChar(100)
+  rol       String    @default("USER") @db.VarChar(50)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  auditorias Auditoria[]
+
+  @@map("usuarios")
+}
+
+model Autor {
+  id         Int       @id @default(autoincrement())
+  nombre     String    @db.VarChar(255)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  libros     Libro[]
+
+  @@map("autores")
+}
+
+model Editorial {
+  id         Int       @id @default(autoincrement())
+  nombre     String    @db.VarChar(255)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  libros     Libro[]
+
+  @@map("editoriales")
+}
+
+model Genero {
+  id         Int       @id @default(autoincrement())
+  nombre     String    @db.VarChar(255)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  libros     Libro[]
+
+  @@map("generos")
+}
+
+model Libro {
+  id          Int         @id @default(autoincrement())
+  titulo      String      @db.VarChar(255)
+  precio      Decimal     @db.Decimal(10, 2)
+  imagen      String?     @map("imagen") @db.VarChar(255)
+  disponible  Boolean     @default(true)
+  autorId     Int         @map("autor_id")
+  editorialId Int         @map("editorial_id")
+  generoId    Int         @map("genero_id")
+  createdAt   DateTime?   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt   DateTime?   @map("deleted_at") @db.Timestamp(6)
+  inventario  Inventario?
+  autor       Autor       @relation(fields: [autorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  editorial   Editorial   @relation(fields: [editorialId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  genero      Genero      @relation(fields: [generoId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([autorId], map: "idx_libros_autor_id")
+  @@index([disponible], map: "idx_libros_disponible")
+  @@index([editorialId], map: "idx_libros_editorial_id")
+  @@index([generoId], map: "idx_libros_genero_id")
+  @@index([precio], map: "idx_libros_precio")
+  @@index([titulo], map: "idx_libros_titulo")
+  @@map("libros")
+}
+
+model Inventario {
+  id       Int      @id @default(autoincrement())
+  libroId  Int      @unique @map("libro_id")
+  cantidad Int      @default(0)
+  fecha    DateTime @default(now()) @db.Timestamp(6)
+  libro    Libro    @relation(fields: [libroId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("inventario")
+}
+
+model Auditoria {
+  id        Int      @id @default(autoincrement())
+  accion    String
+  detalles  String?
+  usuarioId Int?     @map("usuario_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("auditoria")
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./ERD.md"
+}

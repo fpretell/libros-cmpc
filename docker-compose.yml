@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: cmpc_libros_db
+    environment:
+      POSTGRES_USER: libros_user
+      POSTGRES_PASSWORD: libros_pass
+      POSTGRES_DB: cmpc_libros
+    ports:
+      - "5434:5432"
+    volumes:
+      - cmpc_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U libros_user -d cmpc_libros"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+    container_name: cmpc_libros_api
+    working_dir: /usr/src/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/usr/src/app
+      - ./backend/uploads:/usr/src/app/uploads
+      - ./backend/.env:/usr/src/app/.env
+      - /usr/src/app/node_modules
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: libros_user
+      DB_PASSWORD: libros_pass
+      DB_NAME: cmpc_libros
+      CHOKIDAR_USEPOLLING: "true"
+      FRONTEND_URL: http://localhost:3001
+    command: ["sh", "-c", "npx prisma migrate deploy --config prisma.config.docker.ts && npm run start:dev"]
+    
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - PORT=3001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  cmpc_db_data:
